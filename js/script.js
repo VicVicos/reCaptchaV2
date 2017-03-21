@@ -1,10 +1,9 @@
-
 document.addEventListener("DOMContentLoaded", function(event) { 
   onload();
 });
 
 function onload() {
-	var element = document.querySelector('.elSubmit');
+	var element = document.querySelector('.g-recaptcha').closest('form').querySelector('[type=submit]');
 	element.onclick = validate;
 }
 
@@ -14,8 +13,7 @@ function validate(event) {
 }
 
 var onSubmit = function(token) {
-	//document.querySelector('.elSubmit').closest('form').submit();
-	var element = document.querySelector('.elSubmit');
+	var element = document.querySelector('.g-recaptcha').closest('form').querySelector('[type=submit]');
 	element.onclick = null;
 	element.click();
 };
