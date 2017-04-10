@@ -20,20 +20,32 @@ jimport('joomla.environment.browser');
  */
 class plgCaptchaRecaptcha2 extends JPlugin
 {
-    const RECAPTCHA_SCRIPT = 'https://www.google.com/recaptcha/api.js';
+    const RECAPTCHA_SCRIPT = 'https://www.google.com/recaptcha/api.js?onload=JoomlaInitReCaptcha2_0&render=explicit';
     const RECAPTCHA_VERIFY = 'https://www.google.com/recaptcha/api/siteverify';
+    const RECAPTCHA_CALLBACK = '/plugins/captcha/recaptcha2/js/script_2.0.js';
 
-    private $publicKey, $privateKey, $response, $userIP;
+    private $publicKey, $privateKey, $response, $userIP, $doc, $typeMethod;
 
 	public function __construct($subject, $config)
 	{
 		parent::__construct($subject, $config);
 		$this->loadLanguage();
-		$doc = JFactory::getDocument();
-		$doc->addScript(self::RECAPTCHA_SCRIPT);
+		$this->doc = JFactory::getDocument();
+		$this->doc->addScript(self::RECAPTCHA_SCRIPT);
+        $this->doc->addScript(self::RECAPTCHA_CALLBACK);
 
         $this->publicKey = $this->params->get('public_key', '');
         $this->privateKey = $this->params->get('private_key', '');
+
+        $this->initTypeCaptcha();
+	}
+
+	private function initTypeCaptcha() {
+        if ($this->params->get('recaptcha_type') == 0) {
+            $this->typeMethod = 'captchaMethod2_0';
+        } else {
+            $this->typeMethod = 'captchaMethodInvisible';
+        }
 	}
 
 	public function onInit()
@@ -68,15 +80,18 @@ class plgCaptchaRecaptcha2 extends JPlugin
         return $_SERVER['REMOTE_ADDR'];
     }
 
-	public function onDisplay()
+	public function onDisplay($id = 'dynamic_recaptcha_1')
 	{
-	    if ($this->params->get('recaptcha_type') == 0)
-            return '<div class="g-recaptcha" data-sitekey="' . $this->publicKey . '"></div>';
-	    else {
-            $doc = JFactory::getDocument();
-            $doc->addScript('/plugins/captcha/recaptcha2/js/script.js');
-            return '<div class="g-recaptcha" data-sitekey="' . $this->publicKey . '" data-callback="onSubmit" data-size="invisible"></div>';
-        }
+	    return $this->{$this->typeMethod}($id);
+	}
+
+	private function captchaMethod2_0($id) {
+        return '<div id="' . $id . '" class="g-recaptcha" data-sitekey="' . $this->publicKey . '"></div>';
+	}
+
+	private function captchaMethodInvisible($id) {
+        $this->doc->addScript('/plugins/captcha/recaptcha2/js/script.js');
+        return '<div class="g-recaptcha" data-sitekey="' . $this->publicKey . '" data-callback="onSubmit" data-size="invisible"></div>';
 	}
 
 	public function onCheckAnswer()
