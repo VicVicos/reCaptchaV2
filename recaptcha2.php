@@ -20,42 +20,37 @@ jimport('joomla.environment.browser');
  */
 class plgCaptchaRecaptcha2 extends JPlugin
 {
-    const RECAPTCHA_SCRIPT = 'https://www.google.com/recaptcha/api.js?onload=JoomlaInitReCaptcha2_0&render=explicit';
+    const RECAPTCHA_SCRIPT = 'https://www.google.com/recaptcha/api.js';
     const RECAPTCHA_VERIFY = 'https://www.google.com/recaptcha/api/siteverify';
-    const RECAPTCHA_CALLBACK = '/plugins/captcha/recaptcha2/js/script_2.0.js';
 
-    private $publicKey, $privateKey, $response, $userIP, $doc, $typeMethod;
+    private $publicKey, $privateKey, $response, $userIP;
 
-	public function __construct($subject, $config)
-	{
-		parent::__construct($subject, $config);
-		$this->loadLanguage();
-		$this->doc = JFactory::getDocument();
-		$this->doc->addScript(self::RECAPTCHA_SCRIPT);
-        $this->doc->addScript(self::RECAPTCHA_CALLBACK);
+    public function __construct($subject, $config)
+    {
+        parent::__construct($subject, $config);
+        $this->loadLanguage();
+        $doc = JFactory::getDocument();
 
         $this->publicKey = $this->params->get('public_key', '');
         $this->privateKey = $this->params->get('private_key', '');
+        $this->type = $this->params->get('recaptcha_type');
 
-        $this->initTypeCaptcha();
-	}
-
-	private function initTypeCaptcha() {
-        if ($this->params->get('recaptcha_type') == 0) {
-            $this->typeMethod = 'captchaMethod2_0';
+        if ($this->type == 0) {
+            $doc->addScript(self::RECAPTCHA_SCRIPT);
         } else {
-            $this->typeMethod = 'captchaMethodInvisible';
+            $doc->addScript('/plugins/captcha/recaptcha2/js/script.js');
+            $doc->addScript(self::RECAPTCHA_SCRIPT . '?onload=onloadCallback&render=explicit', 'text/javascript', true, true);
         }
-	}
+    }
 
-	public function onInit()
-	{
+    public function onInit()
+    {
         $this->checkPublicKey();
         $this->checkPrivateKey();
         $this->checkIP();
 
-		return true;
-	}
+        return true;
+    }
 
     private function checkPublicKey() {
         if ($this->publicKey == null || $this->publicKey == '') {
@@ -63,11 +58,11 @@ class plgCaptchaRecaptcha2 extends JPlugin
         }
     }
 
-	private function checkPrivateKey() {
+    private function checkPrivateKey() {
         if ($this->privateKey == null || $this->privateKey == '') {
             throw new Exception(JText::_('PLG_RECAPTCHA_ERROR_NO_PRIVATE_KEY'));
         }
-	}
+    }
 
     private function checkIP() {
         $this->userIP = $this->getUserIP();
@@ -80,22 +75,18 @@ class plgCaptchaRecaptcha2 extends JPlugin
         return $_SERVER['REMOTE_ADDR'];
     }
 
-	public function onDisplay($id = 'dynamic_recaptcha_1')
-	{
-	    return $this->{$this->typeMethod}($id);
-	}
+    public function onDisplay()
+    {
+        if ($this->params->get('recaptcha_type') == 0)
+            return '<div class="g-recaptcha" data-sitekey="' . $this->publicKey . '"></div>';
+        else {
+            $uniq_id = uniqid("gcaptcha-", false);
+            return '<div id="' . $uniq_id . '" class="recaptcha" data-sitekey="' . $this->publicKey . '"></div>';
+        }
+    }
 
-	private function captchaMethod2_0($id) {
-        return '<div id="' . $id . '" class="g-recaptcha" data-sitekey="' . $this->publicKey . '"></div>';
-	}
-
-	private function captchaMethodInvisible($id) {
-        $this->doc->addScript('/plugins/captcha/recaptcha2/js/script.js');
-        return '<div class="g-recaptcha" data-sitekey="' . $this->publicKey . '" data-callback="onSubmit" data-size="invisible"></div>';
-	}
-
-	public function onCheckAnswer()
-	{
+    public function onCheckAnswer()
+    {
         $this->_recaptcha_http_post();
 
         if ($this->response->success === false) {
@@ -103,7 +94,7 @@ class plgCaptchaRecaptcha2 extends JPlugin
             return false;
         }
         return true;
-	}
+    }
 
     private function _recaptcha_http_post()
     {
