@@ -1,19 +1,30 @@
-document.addEventListener("DOMContentLoaded", function(event) { 
-  onload();
-});
+var onloadCallback = function() {
 
-function onload() {
-	var element = document.querySelector('.g-recaptcha').closest('form').querySelector('[type=submit]');
-	element.onclick = validate;
-}
+    var recaptcha = jQuery('.recaptcha');
+    var public_key = recaptcha.attr('data-sitekey');
+    var ids = [];
 
-function validate(event) {
-	event.preventDefault();
-    grecaptcha.execute();
+    recaptcha.each(function() {
+        var id = jQuery(this).attr('id');
+        ids.push(id);
+    });
+
+    jQuery.each(ids, function(index, value) {
+        var widgetId = grecaptcha.render(value, {
+            'sitekey' : public_key,
+            'callback' : onSubmit,
+            'size' : 'invisible',
+        });
+
+        var form = jQuery('#' + value).parents('form').attr('id');
+        jQuery('#' + form).submit(function() {
+            grecaptcha.execute(widgetId);
+            return true;
+        });
+    });
+
 }
 
 var onSubmit = function(token) {
-	var element = document.querySelector('.g-recaptcha').closest('form').querySelector('[type=submit]');
-	element.onclick = null;
-	element.click();
+    // ...
 };
